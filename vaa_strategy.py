@@ -2,27 +2,38 @@ import yfinance as yf
 from datetime import datetime, timedelta
 
 
-def get_return(ticker, months):
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=months * 30)
-    data = yf.download(ticker, start=start_date, end=end_date, progress=False)
-    if len(data) < 2:
+def get_close_price(ticker, date):
+    data = yf.download(ticker, start=date - timedelta(days=10), end=date + timedelta(days=1), progress=True)
+    if not data.empty:
+        return data['Adj Close'].iloc[0]
+    else:
         return None
-    return (data['Adj Close'].iloc[-1] / data['Adj Close'].iloc[0]) - 1
+
+
+def get_return(ticker, days):
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    end_price = get_close_price(ticker, end_date)
+    start_price = get_close_price(ticker, start_date)
+
+    if end_price is None or start_price is None:
+        return None
+
+    return (end_price / start_price) - 1
 
 
 def calculate_momentum_score(ticker):
     returns = {
-        1: get_return(ticker, 1),
-        3: get_return(ticker, 3),
-        6: get_return(ticker, 6),
-        12: get_return(ticker, 12)
+        30: get_return(ticker, 30),
+        90: get_return(ticker, 90),
+        180: get_return(ticker, 180),
+        365: get_return(ticker, 365)
     }
 
     if None in returns.values():
         return None
 
-    return (12 * returns[1]) + (4 * returns[3]) + (2 * returns[6]) + returns[12]
+    return (12 * returns[30]) + (4 * returns[90]) + (2 * returns[180]) + returns[365]
 
 
 def vaa_aggressive_strategy(total_asset_value):

@@ -5,6 +5,8 @@ from dual_momentum_strategy import original_dual_momentum_strategy
 from vaa_strategy import vaa_aggressive_strategy
 from laa_strategy import laa_strategy
 import os
+from vaa_strategy import get_return, calculate_momentum_score
+
 
 EXCEL_FILE = 'asset_allocation_results.xlsx'
 SUMMARY_SHEET = 'Portfolio Summary'
@@ -173,25 +175,6 @@ def update_summary_sheet(new_value, allocations):
         return None
 
 
-def get_asset_info(ticker):
-    asset = yf.Ticker(ticker)
-    info = asset.info
-    price = info.get('regularMarketPrice', None)
-    if price is None:
-        price = info.get('previousClose', None)  # 대체 가격 정보
-
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)
-    history = asset.history(start=start_date, end=end_date)
-
-    returns = {
-        '1M': (history['Close'].iloc[-1] / history['Close'].iloc[-22] - 1) * 100 if len(history) >= 22 else None,
-        '3M': (history['Close'].iloc[-1] / history['Close'].iloc[-66] - 1) * 100 if len(history) >= 66 else None,
-        '6M': (history['Close'].iloc[-1] / history['Close'].iloc[-126] - 1) * 100 if len(history) >= 126 else None,
-        '12M': (history['Close'].iloc[-1] / history['Close'].iloc[0] - 1) * 100 if len(history) > 0 else None
-    }
-
-    return price, returns
 
 
 def update_strategy_details_sheet(allocations, total_asset_value):
@@ -200,7 +183,7 @@ def update_strategy_details_sheet(allocations, total_asset_value):
         for strategy, allocation in allocations.items():
             strategy_total = sum(allocation.values())
             for ticker, amount in allocation.items():
-                price, returns = get_asset_info(ticker)
+                price = get_current_price(ticker)
                 quantity = int(amount / price) if price and price > 0 else 0
 
                 row = {
@@ -215,16 +198,21 @@ def update_strategy_details_sheet(allocations, total_asset_value):
                     'Quantity': quantity
                 }
 
+                # VAA 전략에만 수익률과 momentum_score 추가
                 if strategy == 'VAA':
-                    score = sum(
-                        [12 * returns['1M'], 4 * returns['3M'], 2 * returns['6M'], returns['12M']]) / 100 if all(
-                        returns.values()) else None
+                    returns = {
+                        '1M': get_return(ticker, 30),
+                        '3M': get_return(ticker, 90),
+                        '6M': get_return(ticker, 180),
+                        '12M': get_return(ticker, 365)
+                    }
+
                     row.update({
-                        'Score': score,
-                        '1M': returns['1M'],
-                        '3M': returns['3M'],
-                        '6M': returns['6M'],
-                        '12M': returns['12M']
+                        '1M': returns['1M'] * 100 if returns['1M'] is not None else None,
+                        '3M': returns['3M'] * 100 if returns['3M'] is not None else None,
+                        '6M': returns['6M'] * 100 if returns['6M'] is not None else None,
+                        '12M': returns['12M'] * 100 if returns['12M'] is not None else None,
+                        'Score': calculate_momentum_score(ticker)
                     })
 
                 data.append(row)
@@ -236,6 +224,7 @@ def update_strategy_details_sheet(allocations, total_asset_value):
     except Exception as e:
         print(f"Error updating Strategy Details: {str(e)}")
         return None
+
 
 def main():
     asset_df, total_asset_value = calculate_current_asset_value()
@@ -260,7 +249,7 @@ def main():
         print(f"{strategy}:")
         print(allocation)
 
-    file_path = update_summary_sheet(total_asset_value, allocations)
+    update_summary_sheet(total_asset_value, allocations)
     file_path = update_strategy_details_sheet(allocations, total_asset_value)
 
     if file_path:

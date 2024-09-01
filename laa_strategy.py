@@ -1,5 +1,4 @@
 import yfinance as yf
-import pandas as pd
 import pandas_datareader as pdr
 from datetime import datetime, timedelta
 
