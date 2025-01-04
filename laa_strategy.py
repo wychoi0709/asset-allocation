@@ -17,7 +17,7 @@ def get_sp500_signal():
 
 def get_unemployment_signal():
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)  # 1년치 데이터
+    start_date = end_date - timedelta(days=1000)  # 1000일치 데이터
     unemployment_data = pdr.get_data_fred('UNRATE', start=start_date, end=end_date)
 
     unemployment_data['12MA'] = unemployment_data['UNRATE'].rolling(window=12).mean()
