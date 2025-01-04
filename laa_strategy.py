@@ -9,8 +9,8 @@ def get_sp500_signal():
     sp500 = yf.download('^GSPC', start=start_date, end=end_date, progress=False)
 
     sp500['200MA'] = sp500['Close'].rolling(window=200).mean()
-    current_price = sp500['Close'].iloc[-1]
-    current_200ma = sp500['200MA'].iloc[-1]
+    current_price = sp500['Close'].iloc[-1].item()  # 마지막 값을 Python float로 변환
+    current_200ma = sp500['200MA'].iloc[-1].item()  # 마지막 200MA 값을 Python float로 변환
 
     return current_price > current_200ma
 

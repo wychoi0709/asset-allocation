@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 def get_close_price(ticker, date):
     data = yf.download(ticker, start=date - timedelta(days=10), end=date + timedelta(days=1), progress=True)
     if not data.empty:
-        return data['Adj Close'].iloc[0]
+        return data['Close'].iloc[0].item()  # .item()을 사용하여 Python의 기본 데이터 타입으로 변환
     else:
         return None
 

@@ -9,7 +9,12 @@ def get_12_month_return(ticker):
     data = yf.download(ticker, start=start_date, end=end_date, progress=False)
     if len(data) < 2:
         return None
-    return (data['Adj Close'].iloc[-1] / data['Adj Close'].iloc[0]) - 1
+    # 단일 값(float) 반환
+    start_price = data['Close'].iloc[0].item()  # 첫 번째 값 추출
+    end_price = data['Close'].iloc[-1].item()  # 마지막 값 추출
+    return (end_price / start_price) - 1
+
+
 
 def original_dual_momentum_strategy(total_asset_value):
     strategy_allocation = total_asset_value
